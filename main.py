@@ -4,54 +4,17 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def parse_data_string(data_string):
-    """Parses the data string, creates a dictionary, and removes the footer.
-
-    Args:
-        data_string: The data string received from the API call.
-
-    Returns:
-        A dictionary containing the parsed data or None if parsing fails.
-    """
-
-    # Clean the data string by removing leading/trailing whitespace and newlines
-    cleaned_string = data_string.strip()
-
-    # Split the string into lines, combining lines starting with spaces
-    lines = []
-    current_line = ""
-    for line in cleaned_string.splitlines():
-        if line.startswith(" "):
-            current_line += line.strip()
-        else:
-            if current_line:
-                lines.append(current_line)
-            current_line = line.strip()
-    if current_line:
-        lines.append(current_line)
-
-    # Filter out the footer (line starting with "Powered By")
-    data_lines = [line for line in lines if not line.startswith("Powered By")]
-
-    # Create a dictionary from valid data lines (key-value pairs)
-    data_dict = {}
-    for line in data_lines:
-        # Split only if the line contains a colon (':')
-        if ':' in line:
-            try:
-                key, value = line.split(':', 1)
-                key = key.strip()
-                # Extract numerical values within parentheses (if any)
-                value_match = re.search(r"\(([^)]+)\)", value)
-                if value_match:
-                    value = value_match.group(1)
-                else:
-                    value = value.strip()
-                data_dict[key] = value
-            except ValueError:  # Handle parsing errors gracefully
-                pass  # Ignore lines that cannot be reliably split
-
-    return data_dict
+def parse_data_string(s):
+    numbers = re.findall(r'\d+ / \d+|\d+', s)
+    functional = numbers[3]
+    if ' / ' in functional:
+        functional = functional.split(' / ')[0]  # take the numerator if it's a fraction
+    return {
+        "people_in_the_gym": numbers[0],
+        "muscular_condition": numbers[1],
+        "aerobic": numbers[2],
+        "functional": int(functional),
+    }
 
 
 def get_data_from_api(url):
@@ -75,7 +38,7 @@ def get_data_from_api(url):
     prediction_container = soup.find('div', {'id': 'prediction-container'})
     prediction_data = prediction_container.text if prediction_container else "Prediction container data not found"
 
-    print(realtime_data)
+    # print(realtime_data)
     # print("\nPrediction Container Data:\n", prediction_data)
 
     parsed_data = parse_data_string(realtime_data)
